@@ -1,31 +1,71 @@
 # LazyMail
 
-LazyMail is a terminal-first email workspace inspired by the panel-based workflow of tools like lazygit.
+Terminal-first email workspace with a focused, panel-based workflow.
 
-The project is currently in early bootstrap stage. The Go development environment and repository structure are ready, and the next milestone is a usable TUI shell.
+LazyMail aims to bring the speed of modern terminal tools to everyday email handling: triage quickly, navigate confidently, and keep context in one place.
 
-## Vision
+> Status: **Alpha (bootstrap complete, core TUI under active development)**
 
-- Fast email triage from the terminal
-- Keyboard-first workflow with mouse support
-- Multi-panel interface (sidebar, mail list, viewer)
-- Extensible architecture for future automation (including AI-assisted flows)
+## Table of Contents
 
-## Current Status
+- [Why LazyMail](#why-lazymail)
+- [Highlights](#highlights)
+- [Project Status](#project-status)
+- [Getting Started](#getting-started)
+- [Development](#development)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [FAQ](#faq)
+- [License](#license)
 
-- Go module initialized
-- Minimal runnable entrypoint at `cmd/lazymail/main.go`
-- VS Code Go tooling settings added (`gopls`, `goimports`, `staticcheck`)
-- Product notes are available under the `docs/` directory
+## Why LazyMail
 
-## Requirements
+Email clients are often either too heavy for fast triage or too minimal for serious workflows. LazyMail is designed to sit in the middle:
 
-- Go 1.26+
+- **Terminal-native speed** for high-volume inbox processing.
+- **Keyboard-first ergonomics** with **mouse support** where it helps.
+- **Panel-based layout** (sidebar, message list, viewer) to reduce context switching.
+- **Extensible architecture** to support automation and intelligent workflows.
 
-## Quick Start
+## Highlights
+
+### Available now
+
+- Go workspace bootstrapped and runnable.
+- Clean project entrypoint: [cmd/lazymail/main.go](cmd/lazymail/main.go).
+- Baseline VS Code Go tooling configuration in [.vscode/settings.json](.vscode/settings.json).
+- Product and interaction notes in [docs/需求文档.md](docs/%E9%9C%80%E6%B1%82%E6%96%87%E6%A1%A3.md) and [docs/UI 交互细节.md](docs/UI%20%E4%BA%A4%E4%BA%92%E7%BB%86%E8%8A%82.md).
+
+### Planned
+
+- Bubble Tea multi-panel shell.
+- IMAP receive + SMTP send.
+- Local caching and fast search.
+- Multi-account support.
+- Better automation hooks.
+
+## Project Status
+
+This repository is in early-stage product development.
+
+- The development environment is ready.
+- The repository structure is stabilized for iterative delivery.
+- Core runtime features are not production-ready yet.
+
+If you want to contribute early, this is a great time to shape architecture and UX.
+
+## Getting Started
+
+### Requirements
+
+- Go 1.26 or newer.
+
+### Run locally
 
 ```bash
-git clone <your-repo-url>
+git clone <your-repository-url>
 cd lazymail
 go run ./cmd/lazymail
 ```
@@ -36,15 +76,23 @@ Expected output:
 LazyMail Go environment is ready.
 ```
 
-## Development Commands
+## Development
 
-Run app:
+### Common commands
+
+Run:
 
 ```bash
 go run ./cmd/lazymail
 ```
 
-Format code:
+Build:
+
+```bash
+go build -o bin/lazymail ./cmd/lazymail
+```
+
+Format:
 
 ```bash
 goimports -w .
@@ -56,32 +104,83 @@ Static analysis:
 staticcheck ./...
 ```
 
-Build binary:
+### Recommended tools
 
-```bash
-go build -o bin/lazymail ./cmd/lazymail
+- `gopls`
+- `goimports`
+- `staticcheck`
+- `dlv`
+
+## Configuration
+
+Runtime config file support is planned. A likely initial format is YAML:
+
+```yaml
+accounts:
+	- name: personal
+		imap_host: imap.example.com
+		imap_port: 993
+		smtp_host: smtp.example.com
+		smtp_port: 465
+ui:
+	mouse: true
+	theme: default
 ```
 
-## Planned Architecture
+This is a draft schema and may change before the first stable release.
+
+## Architecture
+
+Current and planned structure:
 
 ```text
-cmd/lazymail/         # entrypoint
-internal/tui/         # Bubble Tea UI models and panels
+cmd/lazymail/         # application entrypoint
+internal/tui/         # Bubble Tea models and views
 internal/mail/        # IMAP/SMTP adapters
-internal/store/       # local cache (SQLite)
-internal/config/      # configuration loading
+internal/store/       # local cache and persistence
+internal/config/      # config loading and validation
 internal/domain/      # core domain models
-internal/app/         # app orchestration
+internal/app/         # orchestration and services
 ```
+
+Design principles:
+
+- State-driven UI updates.
+- Clear separation between protocol, domain, and presentation.
+- Incremental delivery with testable boundaries.
 
 ## Roadmap
 
-1. Build a Bubble Tea multi-panel layout shell.
-2. Add folder switching and mock mail list navigation.
-3. Integrate IMAP read flow and SMTP send flow.
-4. Add local caching and search.
-5. Add quality-of-life features (shortcuts, mouse gestures, status bar actions).
+1. Build a navigable Bubble Tea multi-panel shell.
+2. Implement folder switching and mock message list interactions.
+3. Integrate IMAP fetch flow and SMTP send flow.
+4. Add local storage, indexing, and search.
+5. Add quality-of-life actions (reply, archive, quick actions).
+
+## Contributing
+
+Contributions are welcome during alpha.
+
+1. Open an issue to discuss the idea or bug.
+2. Keep pull requests focused and atomic.
+3. Run formatting and static checks before submitting.
+
+A dedicated contributing guide may be added as the project grows.
+
+## FAQ
+
+### Is LazyMail production-ready?
+
+No. It is currently alpha-stage and under active design and implementation.
+
+### Does it support multiple accounts today?
+
+Not yet. Multi-account support is part of the planned milestones.
+
+### Why terminal UI for email?
+
+To optimize triage speed, reduce context switches, and support keyboard-centric workflows.
 
 ## License
 
-This project is licensed under the terms of the [LICENSE](LICENSE) file.
+Distributed under the terms in [LICENSE](LICENSE).
