@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 )
 
 // RunOnboarding guides the user through adding the first mail account.
@@ -51,7 +52,7 @@ func RunOnboarding(in io.Reader, out io.Writer, cfg *Config) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	password, err := askString(reader, out, "Password or app password", "")
+	passwordEnv, err := askString(reader, out, "Password environment variable", suggestedPasswordEnv(name, email))
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +78,15 @@ func RunOnboarding(in io.Reader, out io.Writer, cfg *Config) (*Config, error) {
 	}
 
 	account := Account{
-		Name:     name,
-		Email:    email,
-		IMAPHost: imapHost,
-		IMAPPort: imapPort,
-		SMTPHost: smtpHost,
-		SMTPPort: smtpPort,
-		Username: username,
-		Password: password,
-		TLS:      tlsEnabled,
+		Name:        name,
+		Email:       email,
+		IMAPHost:    imapHost,
+		IMAPPort:    imapPort,
+		SMTPHost:    smtpHost,
+		SMTPPort:    smtpPort,
+		Username:    username,
+		PasswordEnv: passwordEnv,
+		TLS:         tlsEnabled,
 	}
 
 	updated := *cfg
@@ -98,8 +99,47 @@ func RunOnboarding(in io.Reader, out io.Writer, cfg *Config) (*Config, error) {
 		return nil, err
 	}
 
+	fmt.Fprintf(out, "Set %s in your shell before starting LazyMail.\n", passwordEnv)
 	fmt.Fprintf(out, "Saved account %q to %s\n", account.Name, Path())
 	return &updated, nil
+}
+
+func suggestedPasswordEnv(name, email string) string {
+	base := strings.TrimSpace(name)
+	if base == "" {
+		base = strings.TrimSpace(email)
+	}
+	if base == "" {
+		return "LAZYMAIL_PASSWORD"
+	}
+
+	var builder strings.Builder
+	for _, r := range strings.ToUpper(base) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			builder.WriteRune(r)
+			continue
+		}
+		if builder.Len() == 0 {
+			continue
+		}
+		if last, _ := utf8LastRune(&builder); last != '_' {
+			builder.WriteByte('_')
+		}
+	}
+
+	suffix := strings.Trim(builder.String(), "_")
+	if suffix == "" {
+		return "LAZYMAIL_PASSWORD"
+	}
+	return "LAZYMAIL_PASSWORD_" + suffix
+}
+
+func utf8LastRune(builder *strings.Builder) (byte, bool) {
+	value := builder.String()
+	if value == "" {
+		return 0, false
+	}
+	return value[len(value)-1], true
 }
 
 type serverDefaults struct {

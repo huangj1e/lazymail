@@ -20,11 +20,13 @@ type Client struct {
 
 // Dial connects and logs in to the IMAP server described by acc.
 func Dial(acc config.Account) (*Client, error) {
+	password, err := acc.ResolvePassword()
+	if err != nil {
+		return nil, err
+	}
+
 	addr := fmt.Sprintf("%s:%d", acc.IMAPHost, acc.IMAPPort)
-	var (
-		c   *imapclient.Client
-		err error
-	)
+	var c *imapclient.Client
 	if acc.TLS {
 		c, err = imapclient.DialTLS(addr, nil)
 	} else {
@@ -34,7 +36,7 @@ func Dial(acc config.Account) (*Client, error) {
 		return nil, fmt.Errorf("imap: dial %s: %w", addr, err)
 	}
 
-	if err := c.Login(acc.Username, acc.Password).Wait(); err != nil {
+	if err := c.Login(acc.Username, password).Wait(); err != nil {
 		c.Close()
 		return nil, fmt.Errorf("imap: login %s: %w", acc.Username, err)
 	}

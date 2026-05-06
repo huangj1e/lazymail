@@ -4,27 +4,92 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Account holds IMAP and SMTP settings for one email account.
 type Account struct {
-	Name     string `yaml:"name"`
-	Email    string `yaml:"email"`
-	IMAPHost string `yaml:"imap_host"`
-	IMAPPort int    `yaml:"imap_port"`
-	SMTPHost string `yaml:"smtp_host"`
-	SMTPPort int    `yaml:"smtp_port"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	TLS      bool   `yaml:"tls"`
+	Name        string `yaml:"name"`
+	Email       string `yaml:"email"`
+	IMAPHost    string `yaml:"imap_host"`
+	IMAPPort    int    `yaml:"imap_port"`
+	SMTPHost    string `yaml:"smtp_host"`
+	SMTPPort    int    `yaml:"smtp_port"`
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password,omitempty"`
+	PasswordEnv string `yaml:"password_env,omitempty"`
+	TLS         bool   `yaml:"tls"`
+}
+
+// Validate checks whether the account has the minimum required connection fields.
+func (a Account) Validate() error {
+	name := strings.TrimSpace(a.Name)
+	if name == "" {
+		return fmt.Errorf("config: account name is required")
+	}
+	if strings.TrimSpace(a.Email) == "" {
+		return fmt.Errorf("config: account %q: email is required", name)
+	}
+	if strings.TrimSpace(a.IMAPHost) == "" {
+		return fmt.Errorf("config: account %q: imap_host is required", name)
+	}
+	if a.IMAPPort <= 0 {
+		return fmt.Errorf("config: account %q: imap_port must be positive", name)
+	}
+	if strings.TrimSpace(a.SMTPHost) == "" {
+		return fmt.Errorf("config: account %q: smtp_host is required", name)
+	}
+	if a.SMTPPort <= 0 {
+		return fmt.Errorf("config: account %q: smtp_port must be positive", name)
+	}
+	if strings.TrimSpace(a.Username) == "" {
+		return fmt.Errorf("config: account %q: username is required", name)
+	}
+	if strings.TrimSpace(a.Password) == "" && strings.TrimSpace(a.PasswordEnv) == "" {
+		return fmt.Errorf("config: account %q: password or password_env is required", name)
+	}
+	return nil
+}
+
+// ResolvePassword returns the credential used for authentication.
+func (a Account) ResolvePassword() (string, error) {
+	if envName := strings.TrimSpace(a.PasswordEnv); envName != "" {
+		value, ok := os.LookupEnv(envName)
+		if !ok || strings.TrimSpace(value) == "" {
+			return "", fmt.Errorf("config: account %q: environment variable %s is not set", a.Name, envName)
+		}
+		return value, nil
+	}
+
+	password := strings.TrimSpace(a.Password)
+	if password == "" {
+		return "", fmt.Errorf("config: account %q: password is not configured", a.Name)
+	}
+	return password, nil
 }
 
 // Config is the root configuration structure.
 type Config struct {
 	Accounts []Account `yaml:"accounts"`
 	Database string    `yaml:"database"` // path to SQLite file
+}
+
+// Validate checks the config for required fields and conflicting account names.
+func (cfg Config) Validate() error {
+	seenNames := make(map[string]struct{}, len(cfg.Accounts))
+	for _, account := range cfg.Accounts {
+		if err := account.Validate(); err != nil {
+			return err
+		}
+		nameKey := strings.ToLower(strings.TrimSpace(account.Name))
+		if _, exists := seenNames[nameKey]; exists {
+			return fmt.Errorf("config: duplicate account name %q", account.Name)
+		}
+		seenNames[nameKey] = struct{}{}
+	}
+	return nil
 }
 
 // Default returns a Config with sensible defaults.
@@ -66,6 +131,9 @@ func Load() (*Config, error) {
 	if cfg.Database == "" {
 		cfg.Database = Default().Database
 	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
@@ -88,6 +156,9 @@ func Save(cfg *Config) error {
 	}
 	if cfg.Database == "" {
 		cfg.Database = Default().Database
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
 	}
 	return writeDefault(Path(), *cfg)
 }

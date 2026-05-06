@@ -118,16 +118,18 @@ Runtime config file support is planned. A likely initial format is YAML:
 ```yaml
 accounts:
 	- name: personal
+		email: alice@example.com
 		imap_host: imap.example.com
 		imap_port: 993
 		smtp_host: smtp.example.com
 		smtp_port: 465
-ui:
-	mouse: true
-	theme: default
+		username: alice@example.com
+		password_env: LAZYMAIL_PASSWORD_PERSONAL
+		tls: true
+database: ~/.config/lazymail/mails.db
 ```
 
-This is a draft schema and may change before the first stable release.
+Use environment variables for mail passwords. Plaintext password fields are only kept as a legacy fallback for older configs.
 
 ## Architecture
 
